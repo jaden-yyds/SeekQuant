@@ -1,0 +1,49 @@
+# ---------- 构建阶段 ----------
+FROM python:3.11.11-slim AS builder
+
+# 1. 正确配置 APT 源
+RUN echo "Types: deb" > /etc/apt/sources.list.d/aliyun.sources && \
+    echo "URIs: http://mirrors.aliyun.com/debian" >> /etc/apt/sources.list.d/aliyun.sources && \
+    echo "Suites: bookworm" >> /etc/apt/sources.list.d/aliyun.sources && \
+    echo "Components: main contrib non-free" >> /etc/apt/sources.list.d/aliyun.sources && \
+    echo "Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg" >> /etc/apt/sources.list.d/aliyun.sources
+
+# 2. 安装编译工具
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends build-essential && \
+    rm -rf /var/lib/apt/lists/* /var/log/apt/*
+
+# 3. 创建并设置工作目录
+WORKDIR /app
+
+# 4. 复制全部应用文件（包含 requirements.txt）
+COPY . .
+
+# 5. 安装依赖到用户目录
+RUN pip3 install --user --no-cache-dir -r requirements.txt \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# ---------- 运行阶段 ----------
+FROM python:3.11.11-slim
+
+# 1. 复用 APT 配置
+COPY --from=builder /etc/apt/sources.list.d/aliyun.sources /etc/apt/sources.list.d/
+
+# 2. 安装运行时依赖
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# 3. 从构建阶段复制必要内容
+COPY --from=builder /root/.local /root/.local
+COPY --from=builder /app /app
+
+# 4. 环境变量配置
+ENV PATH=/root/.local/bin:$PATH \
+    PYTHONPATH=/root/.local/lib/python3.11/site-packages:$PYTHONPATH \
+    STREAMLIT_SERVER_PORT=9091 \
+    STREAMLIT_SERVER_ADDRESS=0.0.0.0
+
+EXPOSE 9091
+WORKDIR /app
+ENTRYPOINT ["streamlit", "run", "main.py"]

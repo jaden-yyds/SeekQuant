@@ -1,6 +1,8 @@
 import streamlit as st
 from chatbot import async_send_message
 
+st.set_page_config(page_title="💬 SeekQuant")
+
 def main():
     question = st.chat_input("Say something")
     if question:

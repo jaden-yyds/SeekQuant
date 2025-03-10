@@ -1,9 +1,8 @@
 import time
-
 import streamlit as st
 from streamlit_option_menu import option_menu
 import tools
-from chatbot import async_send_message, async_chat_split_think_answer, print_events, llm
+from chatbot import llm
 
 assistants = [
     {"label": "李园园（需求）", "value": "lyy", "icon": "book", "key": "lyy", "image": "static/lyy_avatar.png",
@@ -25,7 +24,15 @@ with st.sidebar:
     st.logo(image=f"static/{active_model}.png", size="large", link=None, icon_image=active_avatar)
 
 def main():
-
+    st.markdown("""
+    <style>
+        .st-key-thinking_container * {
+          color: rgba(0,0,0,0.6) !important;
+          font-size: 14px !important;
+          line-height: 1.6 !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
     question = st.chat_input("Say something")
     if assistant_selected:
         st.chat_message("assistant", avatar=active_avatar).write(active_greet)
@@ -38,12 +45,13 @@ def main():
             thinking_stream, answer_stream = tools.split_async_generator(result_stream)
             # 并行消费两个流
             with st.status("思考中...", expanded=True) as thinking_status:
-                thinking_start_time = time.perf_counter()  # 记录开始时间
-                st.write_stream(thinking_stream)
-                thinking_end_time = time.perf_counter()
-                thinking_status.update(
-                    label=f"已深度思考{thinking_end_time - thinking_start_time:.2f}秒", state="complete", expanded=True
-                )
+                with st.container(key="thinking_container"):
+                    thinking_start_time = time.perf_counter()  # 记录开始时间
+                    st.write(thinking_stream, unsafe_allow_html=True)
+                    thinking_end_time = time.perf_counter()
+                    thinking_status.update(
+                        label=f"已深度思考{thinking_end_time - thinking_start_time:.2f}秒", state="complete", expanded=False
+                    )
             st.write_stream(answer_stream)
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ import asyncio
 import queue
 import threading
 from collections.abc import AsyncIterator
-from typing import Tuple, Generator, Any, TypeVar
+from typing import Generator, TypeVar
 
 T = TypeVar('T')
 def split_async_generator(
@@ -18,10 +18,21 @@ def split_async_generator(
 
     # 异步消费函数
     async def _consume():
+        think_start_flag = False
+        think_end_flag = False
         try:
             async for item in async_iter:
-                queue1.put(item)  # 推送到队列1
-                queue2.put(item)  # 推送到队列2
+                if item.content == "<think>":
+                    think_start_flag = True
+                    continue
+                if item.content == "</think>":
+                    think_end_flag = True
+                    queue1.put(None)
+                    continue
+                if think_start_flag and not think_end_flag:
+                    queue1.put(item)  # 推送到队列1
+                if think_end_flag and think_start_flag:
+                    queue2.put(item)  # 推送到队列2
         except Exception as e:
             # 异常处理（可选）
             pass

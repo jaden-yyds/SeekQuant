@@ -1,5 +1,10 @@
+import asyncio
 import os
+from collections.abc import AsyncIterator
+from typing import Tuple
+from langchain_core.messages import BaseMessageChunk
 from langchain_deepseek import ChatDeepSeek
+import tools
 
 # 必须的环境变量检查
 required_env_vars = ["DEEPSEEK_MODEL", "DEEPSEEK_API_KEY", "DEEPSEEK_API_BASE"]
@@ -33,3 +38,24 @@ def async_send_message(message: str):
         ("human", message),
     ]
     return llm.astream(messages)
+
+def async_chat_split_think_answer(message: str) -> Tuple[AsyncIterator[BaseMessageChunk], AsyncIterator[BaseMessageChunk]]:
+    messages = [
+        ("human", message),
+    ]
+    # 拆分为两个流
+    ai_stream, human_stream = asyncio.run(tools.split_chat_stream(llm.astream(messages)))
+    return ai_stream, human_stream
+
+async def print_events(message: str):
+    # 定义一个包含思考逻辑的链
+    # chain = RunnableLambda(lambda x: "思考中...") | llm
+
+    # 监听事件流
+    async for event in llm.astream(message):
+        print(event)
+        # event_type = event["event"]
+        # if "chat_model" in event_type:  # 模型处理阶段
+        #     print(f"[Think] {event['name']}: {event['data'].get('kwargs', {})}")
+        # elif "chain" in event_type:    # 回答生成阶段
+        #     print(f"[Think] {event['name']}: {event['data'].get('kwargs', {})}")

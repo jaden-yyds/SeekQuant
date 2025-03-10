@@ -26,7 +26,7 @@ with st.sidebar:
 def main():
     st.markdown("""
     <style>
-        .st-key-thinking_container * {
+        .st-key-thinking-container * {
           color: rgba(0,0,0,0.6) !important;
           font-size: 14px !important;
           line-height: 1.6 !important;
@@ -45,7 +45,7 @@ def main():
             thinking_stream, answer_stream = tools.split_async_generator(result_stream)
             # 并行消费两个流
             with st.status("思考中...", expanded=True) as thinking_status:
-                with st.container(key="thinking_container"):
+                with st.container(key="thinking-container"):
                     thinking_start_time = time.perf_counter()  # 记录开始时间
                     st.write(thinking_stream, unsafe_allow_html=True)
                     thinking_end_time = time.perf_counter()
